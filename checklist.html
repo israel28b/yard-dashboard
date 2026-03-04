@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Yard Checklist</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F2F0EC;
+    --surface: #FFFFFF;
+    --surface-alt: #F8F7F5;
+    --border: #D4D0C8;
+    --border-strong: #B8B4AA;
+    --text-primary: #1A1A1A;
+    --text-secondary: #5C5C5C;
+    --text-muted: #8A8A8A;
+    --accent-blue: #1B6EC2;
+    --accent-blue-bg: #E8F0FA;
+    --accent-green: #1A7D45;
+    --accent-green-bg: #E6F4EC;
+    --accent-amber: #9A6700;
+    --accent-amber-bg: #FFF3D4;
+    --accent-red: #C41E3A;
+    --accent-red-bg: #FDEDF0;
+    --bay-color: #2D5F2D;
+    --bay-bg: #EAF2EA;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.1);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg); font-family: 'DM Sans', sans-serif;
+    color: var(--text-primary); min-height: 100vh; min-height: 100dvh; overflow-x: hidden;
+  }
+
+  /* ── STICKY HEADER ── */
+  .top-bar {
+    position: sticky; top: 0; z-index: 100; background: var(--surface);
+    border-bottom: 2px solid var(--border); padding: 14px 16px; box-shadow: var(--shadow-sm);
+  }
+  .top-bar-inner { display: flex; align-items: center; justify-content: space-between; }
+  .top-bar-left { display: flex; align-items: center; gap: 10px; }
+
+  .logo-mark {
+    width: 32px; height: 32px; background: var(--text-primary); border-radius: 5px;
+    display: flex; align-items: center; justify-content: center; color: var(--bg);
+    font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 13px;
+    letter-spacing: -1px; flex-shrink: 0;
+  }
+
+  .top-bar-title { font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 16px; letter-spacing: -0.3px; text-transform: uppercase; }
+  .top-bar-date { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+
+  .sync-badge {
+    display: flex; align-items: center; gap: 5px; font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 4px 10px; border-radius: 20px;
+  }
+  .sync-badge.live { background: var(--accent-green-bg); color: var(--accent-green); }
+  .sync-badge.saving { background: var(--accent-amber-bg); color: var(--accent-amber); }
+  .sync-badge.error { background: var(--accent-red-bg); color: var(--accent-red); }
+  .sync-badge.demo { background: var(--surface-alt); color: var(--text-muted); border: 1px solid var(--border); }
+
+  .sync-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+  }
+  .sync-badge.live .sync-dot { animation: pulse 2s ease-in-out infinite; }
+  .sync-badge.saving .sync-dot { animation: spin 0.6s linear infinite; border-radius: 1px; }
+
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+  @keyframes spin { to{transform:rotate(360deg);} }
+
+  /* ── SUMMARY STRIP ── */
+  .summary-strip {
+    display: flex; gap: 8px; padding: 10px 16px; overflow-x: auto;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .summary-strip::-webkit-scrollbar { display: none; }
+
+  .summary-chip {
+    flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding: 8px 14px;
+    border-radius: 20px; font-size: 13px; font-weight: 600; border: 1.5px solid var(--border);
+    background: var(--surface);
+  }
+  .summary-chip .num { font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 16px; }
+  .chip-pending { border-color: var(--accent-amber); color: var(--accent-amber); background: var(--accent-amber-bg); }
+  .chip-received { border-color: var(--accent-green); color: var(--accent-green); background: var(--accent-green-bg); }
+  .chip-missing { border-color: var(--accent-red); color: var(--accent-red); background: var(--accent-red-bg); }
+  .chip-total { border-color: var(--text-primary); color: var(--text-primary); }
+
+  /* ── FILTER TABS ── */
+  .filter-bar {
+    display: flex; gap: 6px; padding: 6px 16px 12px; overflow-x: auto;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .filter-bar::-webkit-scrollbar { display: none; }
+
+  .filter-tab {
+    flex-shrink: 0; padding: 8px 14px; border-radius: var(--radius-sm);
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600;
+    border: 1.5px solid var(--border); background: var(--surface); color: var(--text-secondary);
+    cursor: pointer; transition: all 0.15s ease; -webkit-user-select: none; user-select: none;
+  }
+  .filter-tab:active { transform: scale(0.96); }
+  .filter-tab.active { background: var(--text-primary); color: var(--bg); border-color: var(--text-primary); }
+  .filter-tab .bay-num {
+    display: inline-block; background: rgba(255,255,255,0.15); padding: 1px 6px;
+    border-radius: 4px; margin-left: 4px; font-size: 11px;
+  }
+  .filter-tab.active .bay-num { background: rgba(255,255,255,0.2); }
+
+  /* ── CONTENT ── */
+  .content { padding: 0 12px 100px; }
+
+  .project-section { margin-bottom: 16px; animation: fadeUp 0.35s ease-out both; }
+  .project-section:nth-child(2) { animation-delay: 0.06s; }
+  .project-section:nth-child(3) { animation-delay: 0.12s; }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+
+  .project-header {
+    display: flex; align-items: center; justify-content: space-between; padding: 12px 14px;
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: var(--radius) var(--radius) 0 0; border-bottom: none;
+  }
+  .project-info { display: flex; flex-direction: column; gap: 2px; }
+  .project-id { font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 15px; letter-spacing: -0.3px; }
+  .project-meta { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+
+  .project-bay {
+    display: flex; flex-direction: column; align-items: center; background: var(--bay-bg);
+    border: 1.5px solid #C2D8C2; border-radius: var(--radius-sm); padding: 6px 12px; min-width: 56px;
+  }
+  .project-bay-label { font-family: 'IBM Plex Mono', monospace; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--bay-color); opacity: 0.7; }
+  .project-bay-num { font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 22px; color: var(--bay-color); line-height: 1; }
+
+  .instructions-banner {
+    display: flex; align-items: center; gap: 8px; padding: 8px 14px;
+    background: var(--accent-amber-bg); border-left: 1.5px solid var(--border);
+    border-right: 1.5px solid var(--border); font-size: 12px; font-weight: 600; color: var(--accent-amber);
+  }
+
+  .project-progress {
+    display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+    background: var(--surface-alt); border-left: 1.5px solid var(--border);
+    border-right: 1.5px solid var(--border);
+  }
+  .progress-bar-track { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: var(--accent-green); border-radius: 3px; transition: width 0.4s ease; }
+  .progress-text { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
+
+  /* ── MATERIAL ITEMS ── */
+  .materials-list {
+    background: var(--surface); border: 1.5px solid var(--border); border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius); overflow: hidden;
+  }
+
+  .material-item {
+    display: flex; align-items: center; gap: 12px; padding: 14px;
+    border-bottom: 1px solid var(--border); transition: background 0.15s ease;
+    cursor: pointer; -webkit-user-select: none; user-select: none;
+  }
+  .material-item:last-child { border-bottom: none; }
+  .material-item:active { background: var(--surface-alt); }
+  .material-item.is-received { background: var(--accent-green-bg); }
+  .material-item.is-missing { background: var(--accent-red-bg); }
+
+  .check-circle {
+    width: 36px; height: 36px; border-radius: 50%; border: 2.5px solid var(--border-strong);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: all 0.2s ease; position: relative;
+  }
+  .check-circle svg { width: 18px; height: 18px; opacity: 0; transform: scale(0.5); transition: all 0.2s ease; }
+
+  .material-item.is-received .check-circle { background: var(--accent-green); border-color: var(--accent-green); }
+  .material-item.is-received .check-circle svg.check-icon { opacity: 1; transform: scale(1); stroke: white; }
+  .material-item.is-missing .check-circle { background: var(--accent-red); border-color: var(--accent-red); }
+  .material-item.is-missing .check-circle svg.x-icon { opacity: 1; transform: scale(1); stroke: white; }
+
+  .material-details { flex: 1; min-width: 0; }
+  .material-name { font-size: 14px; font-weight: 600; line-height: 1.3; color: var(--text-primary); }
+  .material-item.is-received .material-name { text-decoration: line-through; color: var(--text-muted); }
+  .material-qty { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: var(--accent-blue); margin-top: 2px; }
+  .material-supplier { font-size: 11px; color: var(--text-muted); font-weight: 500; margin-top: 1px; }
+
+  .status-toggle {
+    font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 8px; border-radius: 4px;
+    border: 1px solid var(--border); background: var(--surface-alt); color: var(--text-muted);
+    cursor: pointer; flex-shrink: 0;
+  }
+  .status-toggle:active { transform: scale(0.95); }
+  .status-toggle.missing-btn { color: var(--accent-red); border-color: var(--accent-red); background: var(--accent-red-bg); }
+
+  /* ── BOTTOM BAR ── */
+  .fab-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 16px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom)); background: var(--surface);
+    border-top: 2px solid var(--border); box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+    display: flex; gap: 10px; z-index: 100;
+  }
+
+  .fab-btn {
+    flex: 1; padding: 14px; border-radius: var(--radius-sm); font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    border: none; cursor: pointer; transition: all 0.15s ease; text-align: center;
+  }
+  .fab-btn:active { transform: scale(0.97); }
+  .fab-primary { background: var(--accent-green); color: white; }
+  .fab-secondary { background: var(--surface-alt); color: var(--text-secondary); border: 1.5px solid var(--border); }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-20px);
+    background: var(--text-primary); color: var(--bg); font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px; font-weight: 600; padding: 10px 20px; border-radius: 8px;
+    box-shadow: var(--shadow-lg); z-index: 200; opacity: 0; pointer-events: none; transition: all 0.3s ease;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── LOADING ── */
+  .loading-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+  .loading-spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent-blue); border-radius: 50%; animation: spin2 0.8s linear infinite; margin: 0 auto 12px; }
+  @keyframes spin2 { to{transform:rotate(360deg);} }
+  .loading-text { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; }
+
+  .config-banner {
+    background: var(--accent-amber-bg); border-bottom: 2px solid var(--accent-amber);
+    padding: 10px 16px; font-size: 12px; font-weight: 600; color: var(--accent-amber);
+    text-align: center; font-family: 'IBM Plex Mono', monospace; line-height: 1.4;
+  }
+</style>
+</head>
+<body>
+
+<script>
+  // ═══════════════════════════════════════════════════════════
+  //  CONFIGURATION — UPDATE THESE VALUES
+  // ═══════════════════════════════════════════════════════════
+
+  // STEP 1: Your Google Sheet ID
+  const SHEET_ID = 'YOUR_SHEET_ID_HERE';
+
+  // STEP 2: Your Google Apps Script Web App URL (for write-back)
+  // See SETUP-GUIDE.md for instructions
+  const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+
+  // STEP 3: Tab names
+  const SHIPMENTS_TAB = 'Shipments';
+  const MATERIALS_TAB = 'Materials';
+
+  // Refresh interval (seconds)
+  const REFRESH_INTERVAL = 30;
+</script>
+
+<div class="config-banner" id="config-banner" style="display:none;">
+  ⚠ DEMO MODE — Connect to Google Sheets by updating config in this file
+</div>
+
+<div class="top-bar">
+  <div class="top-bar-inner">
+    <div class="top-bar-left">
+      <div class="logo-mark">YD</div>
+      <div>
+        <div class="top-bar-title">Material Checklist</div>
+        <div class="top-bar-date" id="top-date">---</div>
+      </div>
+    </div>
+    <div class="sync-badge demo" id="sync-badge">
+      <div class="sync-dot"></div>
+      <span id="sync-text">Demo</span>
+    </div>
+  </div>
+</div>
+
+<div class="summary-strip" id="summary-strip"></div>
+<div class="filter-bar" id="filter-bar"></div>
+<div class="content" id="content">
+  <div class="loading-state">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Loading materials...</div>
+  </div>
+</div>
+
+<div class="fab-bar">
+  <button class="fab-btn fab-secondary" onclick="markAllVisible('Missing')">Mark Missing</button>
+  <button class="fab-btn fab-primary" onclick="markAllVisible('Received')">All Received</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── STATE ──
+  let shipments = [];
+  let materialRows = []; // { project, name, qty, unit, supplier, status, rowIndex }
+  let activeFilter = 'all';
+  let isConfigured = SHEET_ID !== 'YOUR_SHEET_ID_HERE';
+  let pendingWrites = [];
+  let writeTimer = null;
+
+  // ── MOCK DATA ──
+  const MOCK_SHIPMENTS = [
+    { project:'PRJ-2024-0147', foreman:'Mike Delgado', bay:7, eta:'10:30 AM', supplier:'UIS Supply', status:'Pending', instructions:'' },
+    { project:'PRJ-2024-0152', foreman:'Tony Reyes', bay:12, eta:'1:00 PM', supplier:'ABC Materials', status:'Arrived', instructions:'Requires forklift — oversized pallets' },
+    { project:'PRJ-2024-0160', foreman:'Sarah Kim', bay:3, eta:'3:30 PM', supplier:'UIS Supply', status:'Delayed', instructions:'' },
+  ];
+
+  const MOCK_MATERIALS = [
+    { project:'PRJ-2024-0147', name:"6' Steel Post", qty:126, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:2 },
+    { project:'PRJ-2024-0147', name:'12" MGS Block', qty:126, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:3 },
+    { project:'PRJ-2024-0147', name:"25' W Beam", qty:750, unit:'LF', supplier:'UIS', status:'Pending', rowIndex:4 },
+    { project:'PRJ-2024-0147', name:'12\' 6" W Beam', qty:12.5, unit:'LF', supplier:'UIS', status:'Pending', rowIndex:5 },
+    { project:'PRJ-2024-0147', name:'12\' 6" 3D W Beam', qty:1, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:6 },
+    { project:'PRJ-2024-0147', name:'Single Crystal Reflector', qty:33, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:7 },
+    { project:'PRJ-2024-0147', name:'Concrete (3D Anchorage)', qty:1, unit:'CY', supplier:'', status:'Pending', rowIndex:8 },
+    { project:'PRJ-2024-0147', name:'3D Anchorage', qty:1, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:9 },
+    { project:'PRJ-2024-0147', name:'6"x12"x19" MGS Thrie Block (wood)', qty:9, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:10 },
+    { project:'PRJ-2024-0147', name:'3G Transition (R)/(Approach)/(Leading)', qty:1, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:11 },
+    { project:'PRJ-2024-0147', name:'6"x12"x19" MGS Thrie Block (wood) - 2nd', qty:2, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:12 },
+    { project:'PRJ-2024-0147', name:'3H Transition (L)/(Departure)/(Trailing)', qty:1, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:13 },
+    { project:'PRJ-2024-0147', name:'SKT Non-Flared', qty:1, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:14 },
+    { project:'PRJ-2024-0152', name:'SKT Non-Flared', qty:1, unit:'EA', supplier:'ABC Materials', status:'Received', rowIndex:15 },
+    { project:'PRJ-2024-0152', name:'3G Transition (Right)', qty:1, unit:'EA', supplier:'ABC Materials', status:'Received', rowIndex:16 },
+    { project:'PRJ-2024-0152', name:'3H Transition (Left)', qty:1, unit:'EA', supplier:'ABC Materials', status:'Received', rowIndex:17 },
+    { project:'PRJ-2024-0152', name:'Single Crystal Reflector', qty:20, unit:'EA', supplier:'ABC Materials', status:'Missing', rowIndex:18 },
+    { project:'PRJ-2024-0152', name:'12" MGS Block', qty:50, unit:'EA', supplier:'ABC Materials', status:'Received', rowIndex:19 },
+    { project:'PRJ-2024-0160', name:'Single Crystal Reflector', qty:33, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:20 },
+    { project:'PRJ-2024-0160', name:'3D Anchorage', qty:1, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:21 },
+    { project:'PRJ-2024-0160', name:'6"x12"x19" MGS Thrie Block (wood)', qty:9, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:22 },
+  ];
+
+  // ── CSV PARSER ──
+  function parseCSV(text) {
+    const lines = text.split('\n');
+    if (lines.length < 2) return [];
+    const headers = parseCSVLine(lines[0]);
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const values = parseCSVLine(lines[i]);
+      const row = {};
+      headers.forEach((h, idx) => { row[h.trim()] = (values[idx] || '').trim(); });
+      row._rowIndex = i + 1; // 1-indexed sheet row
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  function parseCSVLine(line) {
+    const result = []; let current = ''; let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuotes) {
+        if (ch === '"' && line[i+1] === '"') { current += '"'; i++; }
+        else if (ch === '"') { inQuotes = false; }
+        else { current += ch; }
+      } else {
+        if (ch === '"') { inQuotes = true; }
+        else if (ch === ',') { result.push(current); current = ''; }
+        else { current += ch; }
+      }
+    }
+    result.push(current);
+    return result;
+  }
+
+  // ── DATA FETCHING ──
+  function getSheetURL(tabName) {
+    return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tabName)}`;
+  }
+
+  async function fetchData() {
+    if (!isConfigured) {
+      shipments = MOCK_SHIPMENTS;
+      materialRows = MOCK_MATERIALS;
+      render();
+      return;
+    }
+
+    try {
+      const [shipRes, matRes] = await Promise.all([
+        fetch(getSheetURL(SHIPMENTS_TAB)),
+        fetch(getSheetURL(MATERIALS_TAB))
+      ]);
+
+      if (!shipRes.ok || !matRes.ok) throw new Error('Fetch failed');
+
+      const rawShip = parseCSV(await shipRes.text());
+      const rawMat = parseCSV(await matRes.text());
+
+      shipments = rawShip.map(r => ({
+        project: r['Project ID'] || '',
+        foreman: r['Foreman'] || '',
+        bay: parseInt(r['Bay #'] || r['Bay'] || '0'),
+        eta: r['ETA'] || '',
+        supplier: r['Supplier'] || '',
+        status: r['Shipment Status'] || '',
+        instructions: r['Special Instructions'] || ''
+      }));
+
+      materialRows = rawMat.map(r => ({
+        project: r['Project ID'] || '',
+        name: r['Material Name'] || '',
+        qty: r['Quantity'] || '',
+        unit: r['Unit'] || '',
+        supplier: r['Supplier'] || '',
+        status: r['Material Status'] || 'Pending',
+        checkedBy: r['Checked By'] || '',
+        rowIndex: r._rowIndex
+      }));
+
+      setSyncBadge('live');
+      render();
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setSyncBadge('error');
+      if (materialRows.length === 0) {
+        document.getElementById('content').innerHTML =
+          '<div class="loading-state"><div class="loading-text">Connection error. Retrying...</div></div>';
+      }
+    }
+  }
+
+  // ── WRITE-BACK VIA APPS SCRIPT ──
+  function queueWrite(rowIndex, status) {
+    pendingWrites.push({ row: rowIndex, status: status, timestamp: new Date().toISOString() });
+    setSyncBadge('saving');
+
+    // Debounce: batch writes every 1.5 seconds
+    clearTimeout(writeTimer);
+    writeTimer = setTimeout(flushWrites, 1500);
+  }
+
+  async function flushWrites() {
+    if (pendingWrites.length === 0) return;
+    if (!isConfigured || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
+      pendingWrites = [];
+      setSyncBadge('live');
+      return;
+    }
+
+    const batch = [...pendingWrites];
+    pendingWrites = [];
+
+    try {
+      const response = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates: batch })
+      });
+      setSyncBadge('live');
+    } catch (err) {
+      console.error('Write error:', err);
+      setSyncBadge('error');
+      // Re-queue failed writes
+      pendingWrites = [...batch, ...pendingWrites];
+    }
+  }
+
+  function setSyncBadge(state) {
+    const badge = document.getElementById('sync-badge');
+    const text = document.getElementById('sync-text');
+    badge.className = 'sync-badge ' + state;
+    const labels = { live: 'Synced', saving: 'Saving...', error: 'Offline', demo: 'Demo' };
+    text.textContent = labels[state] || state;
+  }
+
+  // ── RENDERING ──
+  function render() {
+    renderDate();
+    renderSummary();
+    renderFilters();
+    renderContent();
+  }
+
+  function renderDate() {
+    const now = new Date();
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    document.getElementById('top-date').textContent =
+      `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+  }
+
+  function renderSummary() {
+    const all = getVisibleMaterials();
+    const pending = all.filter(m => m.status === 'Pending').length;
+    const received = all.filter(m => m.status === 'Received').length;
+    const missing = all.filter(m => m.status === 'Missing').length;
+
+    document.getElementById('summary-strip').innerHTML = `
+      <div class="summary-chip chip-total"><span class="num">${all.length}</span> Total</div>
+      <div class="summary-chip chip-pending"><span class="num">${pending}</span> Pending</div>
+      <div class="summary-chip chip-received"><span class="num">${received}</span> Received</div>
+      ${missing > 0 ? `<div class="summary-chip chip-missing"><span class="num">${missing}</span> Missing</div>` : ''}
+    `;
+  }
+
+  function renderFilters() {
+    const projects = [...new Set(shipments.map(s => s.project))];
+    let html = `<div class="filter-tab ${activeFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">All</div>`;
+    projects.forEach(p => {
+      const s = shipments.find(sh => sh.project === p);
+      const shortId = p.split('-').pop();
+      html += `<div class="filter-tab ${activeFilter === p ? 'active' : ''}" onclick="setFilter('${p}')">
+        ${shortId}${s ? `<span class="bay-num">Bay ${s.bay}</span>` : ''}
+      </div>`;
+    });
+    document.getElementById('filter-bar').innerHTML = html;
+  }
+
+  function getVisibleMaterials() {
+    if (activeFilter === 'all') return materialRows;
+    return materialRows.filter(m => m.project === activeFilter);
+  }
+
+  function getVisibleShipments() {
+    if (activeFilter === 'all') return shipments;
+    return shipments.filter(s => s.project === activeFilter);
+  }
+
+  function renderContent() {
+    const visibleShipments = getVisibleShipments();
+
+    if (visibleShipments.length === 0) {
+      document.getElementById('content').innerHTML =
+        '<div class="loading-state"><div style="font-size:48px;opacity:0.3;">📦</div><div class="loading-text">No shipments found</div></div>';
+      return;
+    }
+
+    let html = '';
+    visibleShipments.forEach(s => {
+      const mats = materialRows.filter(m => m.project === s.project);
+      const received = mats.filter(m => m.status === 'Received').length;
+      const total = mats.length;
+      const pct = total > 0 ? Math.round((received / total) * 100) : 0;
+
+      html += `<div class="project-section">`;
+      html += `
+        <div class="project-header">
+          <div class="project-info">
+            <div class="project-id">${s.project}</div>
+            <div class="project-meta">${s.foreman} · ETA ${s.eta} · ${s.supplier}</div>
+          </div>
+          <div class="project-bay">
+            <div class="project-bay-label">Bay</div>
+            <div class="project-bay-num">${String(s.bay).padStart(2,'0')}</div>
+          </div>
+        </div>`;
+
+      if (s.instructions) {
+        html += `<div class="instructions-banner">⚠️ ${s.instructions}</div>`;
+      }
+
+      html += `
+        <div class="project-progress">
+          <div class="progress-bar-track"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+          <div class="progress-text">${received}/${total}</div>
+        </div>`;
+
+      html += `<div class="materials-list">`;
+      mats.forEach(m => {
+        const globalIdx = materialRows.indexOf(m);
+        const stateClass = m.status === 'Received' ? 'is-received' : m.status === 'Missing' ? 'is-missing' : '';
+
+        html += `
+          <div class="material-item ${stateClass}" onclick="cycleStatus(${globalIdx})">
+            <div class="check-circle">
+              <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg class="x-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </div>
+            <div class="material-details">
+              <div class="material-name">${m.name}</div>
+              <div class="material-qty">${m.qty} ${m.unit}</div>
+              ${m.supplier ? `<div class="material-supplier">${m.supplier}</div>` : ''}
+            </div>
+            <div class="status-toggle ${m.status === 'Missing' ? 'missing-btn' : ''}" onclick="event.stopPropagation(); toggleMissing(${globalIdx})">
+              ${m.status === 'Missing' ? 'Missing' : 'Flag'}
+            </div>
+          </div>`;
+      });
+      html += `</div></div>`;
+    });
+
+    document.getElementById('content').innerHTML = html;
+  }
+
+  // ── INTERACTIONS ──
+  function cycleStatus(idx) {
+    const m = materialRows[idx];
+    if (m.status === 'Pending' || m.status === 'Missing') {
+      m.status = 'Received';
+      showToast('Marked as received');
+    } else {
+      m.status = 'Pending';
+      showToast('Reset to pending');
+    }
+    queueWrite(m.rowIndex, m.status);
+    render();
+  }
+
+  function toggleMissing(idx) {
+    const m = materialRows[idx];
+    if (m.status === 'Missing') {
+      m.status = 'Pending';
+      showToast('Reset to pending');
+    } else {
+      m.status = 'Missing';
+      showToast('Flagged as missing');
+    }
+    queueWrite(m.rowIndex, m.status);
+    render();
+  }
+
+  function setFilter(project) {
+    activeFilter = project;
+    render();
+  }
+
+  function markAllVisible(status) {
+    const visible = getVisibleMaterials();
+    let count = 0;
+    visible.forEach(m => {
+      if (m.status !== status) {
+        m.status = status;
+        queueWrite(m.rowIndex, status);
+        count++;
+      }
+    });
+    if (count > 0) showToast(`${count} items marked as ${status.toLowerCase()}`);
+    render();
+  }
+
+  // ── TOAST ──
+  let toastTimer;
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
+  }
+
+  // ── INIT ──
+  if (!isConfigured) {
+    document.getElementById('config-banner').style.display = 'block';
+  }
+  fetchData();
+  setInterval(() => { if (pendingWrites.length === 0) fetchData(); }, REFRESH_INTERVAL * 1000);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yard Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --bg: #F2F0EC;
+    --surface: #FFFFFF;
+    --surface-alt: #F8F7F5;
+    --border: #D4D0C8;
+    --border-strong: #B8B4AA;
+    --text-primary: #1A1A1A;
+    --text-secondary: #5C5C5C;
+    --text-muted: #8A8A8A;
+    --accent-blue: #1B6EC2;
+    --accent-blue-bg: #E8F0FA;
+    --accent-green: #1A7D45;
+    --accent-green-bg: #E6F4EC;
+    --accent-amber: #9A6700;
+    --accent-amber-bg: #FFF3D4;
+    --accent-red: #C41E3A;
+    --accent-red-bg: #FDEDF0;
+    --bay-color: #2D5F2D;
+    --bay-bg: #EAF2EA;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --radius: 10px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text-primary);
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    background: var(--surface);
+    border-bottom: 2px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 16px; }
+
+  .logo-mark {
+    width: 38px; height: 38px; background: var(--text-primary); border-radius: 6px;
+    display: flex; align-items: center; justify-content: center; color: var(--bg);
+    font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 16px; letter-spacing: -1px;
+  }
+
+  .header-title {
+    font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 20px;
+    letter-spacing: -0.5px; text-transform: uppercase;
+  }
+
+  .header-subtitle { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-top: -2px; }
+  .header-right { display: flex; align-items: center; gap: 24px; }
+
+  .clock {
+    font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600;
+    letter-spacing: -1px; color: var(--text-primary);
+  }
+
+  .date-display { font-size: 13px; color: var(--text-secondary); font-weight: 500; text-align: right; }
+
+  .refresh-badge {
+    display: flex; align-items: center; gap: 6px; font-size: 11px;
+    color: var(--accent-green); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+
+  .refresh-dot {
+    width: 7px; height: 7px; background: var(--accent-green); border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .error-badge {
+    color: var(--accent-red);
+  }
+  .error-badge .refresh-dot { background: var(--accent-red); animation: none; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  .main {
+    display: flex; flex: 1; min-height: 0; padding: 16px 28px; gap: 24px;
+  }
+
+  .shipments-col {
+    flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0;
+  }
+
+  .section-label {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted);
+    padding-bottom: 4px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+
+  .label-right { display: flex; gap: 8px; align-items: center; }
+
+  .shipment-count {
+    background: var(--text-primary); color: var(--bg); font-size: 11px;
+    padding: 2px 8px; border-radius: 4px; letter-spacing: 0.5px;
+  }
+
+  .mode-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 4px;
+    background: var(--accent-blue-bg); color: var(--accent-blue);
+    font-weight: 600; letter-spacing: 0.3px;
+  }
+
+  /* ── CARD VIEW ── */
+  .cards-container { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; }
+
+  .shipment-card {
+    background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius);
+    padding: 16px 20px; display: flex; flex-direction: column; gap: 10px;
+    box-shadow: var(--shadow-sm); flex: 1; min-height: 0;
+    animation: slideIn 0.4s ease-out both;
+  }
+  .shipment-card:nth-child(2) { animation-delay: 0.08s; }
+  .shipment-card:nth-child(3) { animation-delay: 0.16s; }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+
+  .card-project {
+    font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 20px;
+    letter-spacing: -0.5px; line-height: 1.1;
+  }
+
+  .card-foreman { font-size: 14px; color: var(--text-secondary); font-weight: 500; margin-top: 2px; }
+
+  .bay-tag {
+    display: flex; align-items: center; gap: 6px; background: var(--bay-bg);
+    color: var(--bay-color); font-family: 'IBM Plex Mono', monospace; font-weight: 700;
+    font-size: 22px; padding: 6px 14px; border-radius: 8px; border: 1.5px solid #C2D8C2;
+    white-space: nowrap; flex-shrink: 0;
+  }
+
+  .bay-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; }
+
+  .card-meta { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+
+  .meta-item { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; }
+  .meta-icon { width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .meta-icon svg { width: 16px; height: 16px; }
+  .eta-value { color: var(--accent-blue); font-weight: 600; }
+
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.8px; padding: 3px 10px; border-radius: 5px;
+  }
+  .status-pending { background: var(--accent-amber-bg); color: var(--accent-amber); }
+  .status-arrived { background: var(--accent-green-bg); color: var(--accent-green); }
+  .status-delayed { background: var(--accent-red-bg); color: var(--accent-red); }
+  .status-enroute, .status-en-route { background: var(--accent-blue-bg); color: var(--accent-blue); }
+  .status-partial { background: var(--accent-amber-bg); color: var(--accent-amber); }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .card-materials { font-size: 13px; color: var(--text-secondary); line-height: 1.5; border-top: 1px solid var(--border); padding-top: 8px; }
+  .material-summary { display: flex; flex-wrap: wrap; gap: 6px; }
+  .mat-chip { background: var(--surface-alt); border: 1px solid var(--border); padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .mat-more { color: var(--text-muted); font-size: 12px; font-weight: 600; padding: 2px 6px; }
+  .special-instructions { font-size: 12px; color: var(--accent-amber); font-weight: 600; display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+
+  /* ── TABLE VIEW ── */
+  .table-container {
+    flex: 1; min-height: 0; display: flex; flex-direction: column;
+    background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow-sm); overflow: hidden; animation: slideIn 0.4s ease-out both;
+  }
+
+  .table-header {
+    display: grid; grid-template-columns: 56px 1.4fr 1fr 0.8fr 100px 1.6fr 0.8fr;
+    gap: 0; padding: 10px 16px; background: var(--text-primary); color: #F2F0EC;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;
+  }
+  .table-header > div { padding: 0 4px; }
+
+  .table-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+  .table-row {
+    display: grid; grid-template-columns: 56px 1.4fr 1fr 0.8fr 100px 1.6fr 0.8fr;
+    gap: 0; padding: 0 16px; align-items: center; border-bottom: 1px solid var(--border);
+    flex: 1; min-height: 48px; animation: rowSlide 0.35s ease-out both;
+  }
+  .table-row:nth-child(1) { animation-delay: 0.05s; }
+  .table-row:nth-child(2) { animation-delay: 0.1s; }
+  .table-row:nth-child(3) { animation-delay: 0.15s; }
+  .table-row:nth-child(4) { animation-delay: 0.2s; }
+  .table-row:nth-child(5) { animation-delay: 0.25s; }
+  .table-row:nth-child(6) { animation-delay: 0.3s; }
+
+  @keyframes rowSlide {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .table-row:nth-child(even) { background: var(--surface-alt); }
+  .table-row:last-child { border-bottom: none; }
+  .table-row > div { padding: 0 4px; overflow: hidden; text-overflow: ellipsis; }
+
+  .row-bay {
+    font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 20px;
+    color: var(--bay-color); background: var(--bay-bg); text-align: center;
+    border-radius: 6px; padding: 4px 0 !important; border: 1.5px solid #C2D8C2; line-height: 1.2;
+  }
+  .row-project { font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 15px; letter-spacing: -0.3px; }
+  .row-foreman { font-size: 14px; font-weight: 500; color: var(--text-secondary); }
+  .row-eta { font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 15px; color: var(--accent-blue); }
+  .row-status .status-badge { font-size: 11px; padding: 3px 8px; }
+  .row-materials { font-size: 12px; color: var(--text-secondary); font-weight: 500; line-height: 1.4; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .row-materials .mat-chip { font-size: 11px; padding: 1px 6px; }
+  .row-notes-cell { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .row-notes-cell.has-note { color: var(--accent-amber); font-weight: 600; }
+
+  /* ── QR COLUMN ── */
+  .qr-col { width: 250px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; }
+
+  .qr-panel {
+    background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius);
+    padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 12px;
+    box-shadow: var(--shadow-md); flex: 1;
+  }
+
+  .qr-title {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-primary); text-align: center;
+  }
+
+  .qr-code-wrapper {
+    background: white; border: 2px solid var(--text-primary); border-radius: 8px;
+    padding: 10px; display: flex; align-items: center; justify-content: center;
+  }
+
+  .qr-instruction {
+    font-size: 12px; color: var(--text-secondary); text-align: center; line-height: 1.4; font-weight: 500;
+  }
+  .qr-instruction strong { color: var(--text-primary); display: block; font-size: 13px; }
+  .phone-icon { font-size: 24px; margin-bottom: -4px; }
+
+  /* ── BAY MAP ── */
+  .bay-overview {
+    background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius);
+    padding: 12px; box-shadow: var(--shadow-sm);
+  }
+
+  .bay-overview-title {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-muted);
+    margin-bottom: 8px; text-align: center;
+  }
+
+  .bay-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
+
+  .bay-cell {
+    aspect-ratio: 1; border-radius: 3px; display: flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 700;
+    border: 1.5px solid var(--border); background: var(--surface-alt); color: var(--text-muted);
+  }
+  .bay-cell.active { background: var(--bay-bg); border-color: var(--bay-color); color: var(--bay-color); }
+  .bay-cell.active.has-shipment {
+    background: var(--accent-blue-bg); border-color: var(--accent-blue); color: var(--accent-blue);
+    animation: bayPulse 3s ease-in-out infinite;
+  }
+
+  @keyframes bayPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(27,110,194,0.2); }
+    50% { box-shadow: 0 0 0 3px rgba(27,110,194,0.15); }
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    padding: 6px 28px; background: var(--surface); border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  .footer-text { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+  .footer-bays { display: flex; align-items: center; gap: 12px; font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+  .footer-stat { display: flex; align-items: center; gap: 4px; }
+  .stat-dot { width: 8px; height: 8px; border-radius: 2px; }
+  .stat-dot.occupied { background: var(--accent-blue); }
+  .stat-dot.available { background: var(--accent-green); }
+  .stat-dot.empty { background: var(--border); }
+
+  /* ── LOADING / ERROR ── */
+  .loading-state {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 12px; color: var(--text-muted);
+  }
+  .loading-spinner {
+    width: 32px; height: 32px; border: 3px solid var(--border);
+    border-top-color: var(--accent-blue); border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; }
+  .error-text { color: var(--accent-red); font-size: 12px; margin-top: 4px; }
+
+  /* ── CONFIG BANNER ── */
+  .config-banner {
+    background: var(--accent-amber-bg); border-bottom: 2px solid var(--accent-amber);
+    padding: 8px 28px; font-size: 12px; font-weight: 600; color: var(--accent-amber);
+    text-align: center; flex-shrink: 0;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .config-banner a { color: var(--accent-blue); }
+</style>
+</head>
+<body>
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  CONFIGURATION — UPDATE THESE VALUES                        ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<script>
+  // ═══════════════════════════════════════════════════════════
+  //  STEP 1: Replace with your Google Sheet ID
+  //  (the long string in the Google Sheets URL between /d/ and /edit)
+  //  Example: https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID_HERE/edit
+  // ═══════════════════════════════════════════════════════════
+  const SHEET_ID = 'YOUR_SHEET_ID_HERE';
+
+  // ═══════════════════════════════════════════════════════════
+  //  STEP 2: Replace with your GitHub Pages URL for the checklist
+  //  Example: https://yourusername.github.io/yard-dashboard/checklist.html
+  // ═══════════════════════════════════════════════════════════
+  const CHECKLIST_URL = 'https://yourusername.github.io/yard-dashboard/checklist.html';
+
+  // ═══════════════════════════════════════════════════════════
+  //  STEP 3: Tab names in your Google Sheet (update if you renamed them)
+  // ═══════════════════════════════════════════════════════════
+  const SHIPMENTS_TAB = 'Shipments';
+  const MATERIALS_TAB = 'Materials';
+  const BAYS_TAB = 'Bay Assignments';
+
+  // ═══════════════════════════════════════════════════════════
+  //  Refresh interval in seconds
+  // ═══════════════════════════════════════════════════════════
+  const REFRESH_INTERVAL = 60;
+</script>
+
+<!-- CONFIG WARNING (hidden when configured) -->
+<div class="config-banner" id="config-banner" style="display:none;">
+  ⚠ DEMO MODE — Update SHEET_ID and CHECKLIST_URL in the HTML file to connect to your Google Sheet
+</div>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo-mark">YD</div>
+    <div>
+      <div class="header-title">Yard Dashboard</div>
+      <div class="header-subtitle">Warehouse Receiving</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="refresh-badge" id="status-badge">
+      <div class="refresh-dot"></div>
+      Live
+    </div>
+    <div>
+      <div class="clock" id="clock">--:--</div>
+      <div class="date-display" id="date-display">---</div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="shipments-col">
+    <div class="section-label">
+      Today's Shipments
+      <div class="label-right">
+        <span class="mode-badge" id="mode-badge">—</span>
+        <span class="shipment-count" id="shipment-count">—</span>
+      </div>
+    </div>
+    <div id="shipments-area">
+      <div class="loading-state">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading shipments...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="qr-col">
+    <div class="qr-panel">
+      <div class="qr-title">Scan for<br>Material Checklist</div>
+      <div class="qr-code-wrapper">
+        <div id="qr-code"></div>
+      </div>
+      <div class="qr-instruction">
+        <span class="phone-icon">📱</span>
+        <strong>Scan to check off materials</strong>
+        Opens today's interactive list
+      </div>
+    </div>
+    <div class="bay-overview">
+      <div class="bay-overview-title">Bay Status (1–20)</div>
+      <div class="bay-grid" id="bay-grid"></div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="footer-text" id="footer-refresh">Auto-refreshes every 60s · Data from Google Sheets</div>
+  <div class="footer-bays" id="footer-stats"></div>
+</div>
+
+<script>
+  // ── STATE ──
+  let shipments = [];
+  let materials = [];
+  let bayAssignments = [];
+  let isConfigured = SHEET_ID !== 'YOUR_SHEET_ID_HERE';
+  let lastFetch = null;
+
+  const clockSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+
+  // ── MOCK DATA (used when not configured) ──
+  const MOCK_SHIPMENTS = [
+    { date:'2026-03-04', project:'PRJ-2024-0147', foreman:'Mike Delgado', bay:7, eta:'10:30 AM', supplier:'UIS Supply', status:'Pending', instructions:'' },
+    { date:'2026-03-04', project:'PRJ-2024-0152', foreman:'Tony Reyes', bay:12, eta:'1:00 PM', supplier:'ABC Materials', status:'Arrived', instructions:'Requires forklift — oversized pallets' },
+    { date:'2026-03-04', project:'PRJ-2024-0160', foreman:'Sarah Kim', bay:3, eta:'3:30 PM', supplier:'UIS Supply', status:'Delayed', instructions:'' },
+    { date:'2026-03-04', project:'PRJ-2024-0163', foreman:'Carlos Vega', bay:15, eta:'8:00 AM', supplier:'UIS Supply', status:'Arrived', instructions:'Call foreman on arrival' },
+    { date:'2026-03-04', project:'PRJ-2024-0171', foreman:'James Park', bay:9, eta:'11:15 AM', supplier:'Regional Supply Co', status:'En Route', instructions:'' },
+    { date:'2026-03-04', project:'PRJ-2024-0175', foreman:'Ana Torres', bay:18, eta:'4:00 PM', supplier:'UIS Supply', status:'Pending', instructions:'Partial shipment — rest tomorrow' },
+  ];
+
+  const MOCK_MATERIALS = [
+    { project:'PRJ-2024-0147', name:"6' Steel Post", qty:'126', unit:'EA' },
+    { project:'PRJ-2024-0147', name:'12" MGS Block', qty:'126', unit:'EA' },
+    { project:'PRJ-2024-0147', name:"25' W Beam", qty:'750', unit:'LF' },
+    { project:'PRJ-2024-0152', name:'SKT Non-Flared', qty:'1', unit:'EA' },
+    { project:'PRJ-2024-0152', name:'3G Transition (Right)', qty:'1', unit:'EA' },
+    { project:'PRJ-2024-0160', name:'Single Crystal Reflector', qty:'33', unit:'EA' },
+    { project:'PRJ-2024-0160', name:'3D Anchorage', qty:'1', unit:'EA' },
+  ];
+
+  // ── CSV PARSER ──
+  function parseCSV(text) {
+    const lines = text.split('\n');
+    if (lines.length < 2) return [];
+    const headers = parseCSVLine(lines[0]);
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const values = parseCSVLine(lines[i]);
+      const row = {};
+      headers.forEach((h, idx) => { row[h.trim()] = (values[idx] || '').trim(); });
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  function parseCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuotes) {
+        if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
+        else if (ch === '"') { inQuotes = false; }
+        else { current += ch; }
+      } else {
+        if (ch === '"') { inQuotes = true; }
+        else if (ch === ',') { result.push(current); current = ''; }
+        else { current += ch; }
+      }
+    }
+    result.push(current);
+    return result;
+  }
+
+  // ── DATA FETCHING ──
+  function getSheetURL(tabName) {
+    return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tabName)}`;
+  }
+
+  async function fetchData() {
+    if (!isConfigured) {
+      shipments = filterToday(MOCK_SHIPMENTS);
+      materials = MOCK_MATERIALS;
+      renderDashboard();
+      return;
+    }
+
+    try {
+      const [shipRes, matRes] = await Promise.all([
+        fetch(getSheetURL(SHIPMENTS_TAB)),
+        fetch(getSheetURL(MATERIALS_TAB))
+      ]);
+
+      if (!shipRes.ok || !matRes.ok) throw new Error('Failed to fetch sheet data');
+
+      const shipCSV = await shipRes.text();
+      const matCSV = await matRes.text();
+
+      const rawShipments = parseCSV(shipCSV);
+      const rawMaterials = parseCSV(matCSV);
+
+      // Map columns (handles slight naming variations)
+      shipments = rawShipments.map(r => ({
+        date: r['Date'] || '',
+        project: r['Project ID'] || '',
+        foreman: r['Foreman'] || '',
+        bay: parseInt(r['Bay #'] || r['Bay'] || '0'),
+        eta: r['ETA'] || '',
+        supplier: r['Supplier'] || '',
+        status: r['Shipment Status'] || r['Status'] || '',
+        instructions: r['Special Instructions'] || ''
+      }));
+
+      materials = rawMaterials.map(r => ({
+        project: r['Project ID'] || '',
+        name: r['Material Name'] || '',
+        qty: r['Quantity'] || '',
+        unit: r['Unit'] || '',
+        status: r['Material Status'] || r['Status'] || ''
+      }));
+
+      // Filter to today's shipments
+      shipments = filterToday(shipments);
+
+      lastFetch = new Date();
+      setStatusBadge('live');
+      renderDashboard();
+
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setStatusBadge('error');
+      // If we have previous data, keep showing it
+      if (shipments.length === 0) {
+        document.getElementById('shipments-area').innerHTML = `
+          <div class="loading-state">
+            <div class="loading-text">Connection error</div>
+            <div class="error-text">Could not reach Google Sheets. Retrying...</div>
+          </div>`;
+      }
+    }
+  }
+
+  function filterToday(data) {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    const filtered = data.filter(s => {
+      if (!s.date) return true; // If no date, show it (fail-open)
+      return s.date === todayStr;
+    });
+    // If nothing matches today, show all (for demo/POC purposes)
+    return filtered.length > 0 ? filtered : data;
+  }
+
+  function setStatusBadge(state) {
+    const badge = document.getElementById('status-badge');
+    if (state === 'live') {
+      badge.className = 'refresh-badge';
+      badge.innerHTML = '<div class="refresh-dot"></div> Live';
+    } else {
+      badge.className = 'refresh-badge error-badge';
+      badge.innerHTML = '<div class="refresh-dot"></div> Offline';
+    }
+  }
+
+  // ── RENDERING ──
+  function renderDashboard() {
+    const count = shipments.length;
+    document.getElementById('shipment-count').textContent = `${count} INCOMING`;
+
+    if (count === 0) {
+      document.getElementById('mode-badge').textContent = '';
+      document.getElementById('shipments-area').innerHTML = `
+        <div class="loading-state">
+          <div style="font-size:48px;opacity:0.3;">📦</div>
+          <div class="loading-text">No shipments today</div>
+        </div>`;
+    } else if (count <= 3) {
+      document.getElementById('mode-badge').textContent = 'CARD VIEW';
+      document.getElementById('shipments-area').innerHTML = renderCards(shipments);
+    } else {
+      document.getElementById('mode-badge').textContent = 'TABLE VIEW';
+      document.getElementById('shipments-area').innerHTML = renderTable(shipments);
+    }
+
+    renderBayGrid();
+    renderFooter();
+  }
+
+  function getMaterialsForProject(projectId) {
+    return materials.filter(m => m.project === projectId);
+  }
+
+  function getStatusClass(status) {
+    return 'status-' + (status || 'pending').toLowerCase().replace(/\s+/g, '-');
+  }
+
+  function renderCards(data) {
+    let html = '<div class="cards-container">';
+    data.forEach(s => {
+      const mats = getMaterialsForProject(s.project);
+      const displayMats = mats.slice(0, 3);
+      const moreCount = Math.max(0, mats.length - 3);
+
+      html += `
+        <div class="shipment-card">
+          <div class="card-top">
+            <div>
+              <div class="card-project">${s.project}</div>
+              <div class="card-foreman">Foreman: ${s.foreman}</div>
+            </div>
+            <div class="bay-tag">
+              <span class="bay-label">Bay</span>
+              ${String(s.bay).padStart(2, '0')}
+            </div>
+          </div>
+          <div class="card-meta">
+            <div class="meta-item">
+              <div class="meta-icon">${clockSvg}</div>
+              <span>ETA <span class="eta-value">${s.eta}</span></span>
+            </div>
+            <div class="status-badge ${getStatusClass(s.status)}">
+              <span class="status-dot"></span>
+              ${s.status}
+            </div>
+            <div class="meta-item"><span style="color:var(--text-muted)">${s.supplier}</span></div>
+          </div>
+          <div class="card-materials">
+            <div class="material-summary">
+              ${displayMats.map(m => `<span class="mat-chip">${m.name} ×${m.qty}</span>`).join('')}
+              ${moreCount > 0 ? `<span class="mat-more">+${moreCount} more</span>` : ''}
+            </div>
+          </div>
+          ${s.instructions ? `<div class="special-instructions">⚠ ${s.instructions}</div>` : ''}
+        </div>`;
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function renderTable(data) {
+    let html = `
+      <div class="table-container">
+        <div class="table-header">
+          <div>Bay</div><div>Project</div><div>Foreman</div><div>ETA</div>
+          <div>Status</div><div>Key Materials</div><div>Notes</div>
+        </div>
+        <div class="table-body">`;
+
+    data.forEach(s => {
+      const mats = getMaterialsForProject(s.project);
+      const displayMats = mats.slice(0, 2);
+      const moreCount = Math.max(0, mats.length - 2);
+
+      html += `
+        <div class="table-row">
+          <div class="row-bay">${String(s.bay).padStart(2, '0')}</div>
+          <div class="row-project">${s.project}</div>
+          <div class="row-foreman">${s.foreman}</div>
+          <div class="row-eta">${s.eta}</div>
+          <div class="row-status">
+            <div class="status-badge ${getStatusClass(s.status)}">
+              <span class="status-dot"></span> ${s.status}
+            </div>
+          </div>
+          <div class="row-materials">
+            ${displayMats.map(m => `<span class="mat-chip">${m.name} ×${m.qty}</span>`).join('')}
+            ${moreCount > 0 ? `<span class="mat-more">+${moreCount} more</span>` : ''}
+          </div>
+          <div class="row-notes-cell ${s.instructions ? 'has-note' : ''}">${s.instructions ? '⚠ ' + s.instructions : '—'}</div>
+        </div>`;
+    });
+
+    html += '</div></div>';
+    return html;
+  }
+
+  function renderBayGrid() {
+    const grid = document.getElementById('bay-grid');
+    grid.innerHTML = '';
+    const todayBays = shipments.map(s => s.bay);
+
+    for (let i = 1; i <= 20; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'bay-cell';
+      cell.textContent = i;
+      if (todayBays.includes(i)) {
+        cell.classList.add('active', 'has-shipment');
+      }
+      grid.appendChild(cell);
+    }
+  }
+
+  function renderFooter() {
+    const todayCount = shipments.length;
+    const available = 20 - todayCount;
+    document.getElementById('footer-stats').innerHTML = `
+      <div class="footer-stat"><div class="stat-dot occupied"></div> Today (${todayCount})</div>
+      <div class="footer-stat"><div class="stat-dot empty"></div> Other (${available})</div>
+    `;
+    if (lastFetch) {
+      const t = lastFetch.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('footer-refresh').textContent =
+        `Last updated ${t} · Refreshes every ${REFRESH_INTERVAL}s`;
+    }
+  }
+
+  // ── QR CODE ──
+  function generateQR() {
+    const container = document.getElementById('qr-code');
+    container.innerHTML = '';
+    new QRCode(container, {
+      text: CHECKLIST_URL,
+      width: 150,
+      height: 150,
+      colorDark: '#1A1A1A',
+      colorLight: '#FFFFFF',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }
+
+  // ── CLOCK ──
+  function updateClock() {
+    const now = new Date();
+    const h = now.getHours(), m = String(now.getMinutes()).padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    document.getElementById('clock').textContent = `${h % 12 || 12}:${m} ${ampm}`;
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    document.getElementById('date-display').textContent =
+      `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+  }
+
+  // ── INIT ──
+  if (!isConfigured) {
+    document.getElementById('config-banner').style.display = 'block';
+  }
+
+  updateClock();
+  setInterval(updateClock, 1000);
+  generateQR();
+  fetchData();
+  setInterval(fetchData, REFRESH_INTERVAL * 1000);
+</script>
+
+</body>
+</html>
