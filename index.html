@@ -149,7 +149,7 @@
     letter-spacing: -0.5px; line-height: 1.1;
   }
 
-  .card-foreman { font-size: 14px; color: var(--text-secondary); font-weight: 500; margin-top: 2px; }
+
 
   .bay-tag {
     display: flex; align-items: center; gap: 6px; background: var(--bay-bg);
@@ -178,10 +178,7 @@
   .status-partial { background: var(--accent-amber-bg); color: var(--accent-amber); }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
-  .card-materials { font-size: 13px; color: var(--text-secondary); line-height: 1.5; border-top: 1px solid var(--border); padding-top: 8px; }
-  .material-summary { display: flex; flex-wrap: wrap; gap: 6px; }
-  .mat-chip { background: var(--surface-alt); border: 1px solid var(--border); padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; white-space: nowrap; }
-  .mat-more { color: var(--text-muted); font-size: 12px; font-weight: 600; padding: 2px 6px; }
+
   .special-instructions { font-size: 12px; color: var(--accent-amber); font-weight: 600; display: flex; align-items: center; gap: 4px; margin-top: 2px; }
 
   /* ── TABLE VIEW ── */
@@ -192,7 +189,7 @@
   }
 
   .table-header {
-    display: grid; grid-template-columns: 56px 1.4fr 1fr 0.8fr 100px 1.6fr 0.8fr;
+    display: grid; grid-template-columns: 56px 1.6fr 1fr 120px 1.2fr;
     gap: 0; padding: 10px 16px; background: var(--text-primary); color: #F2F0EC;
     font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600;
     text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;
@@ -202,7 +199,7 @@
   .table-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
   .table-row {
-    display: grid; grid-template-columns: 56px 1.4fr 1fr 0.8fr 100px 1.6fr 0.8fr;
+    display: grid; grid-template-columns: 56px 1.6fr 1fr 120px 1.2fr;
     gap: 0; padding: 0 16px; align-items: center; border-bottom: 1px solid var(--border);
     flex: 1; min-height: 48px; animation: rowSlide 0.35s ease-out both;
   }
@@ -228,11 +225,8 @@
     border-radius: 6px; padding: 4px 0 !important; border: 1.5px solid #C2D8C2; line-height: 1.2;
   }
   .row-project { font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 15px; letter-spacing: -0.3px; }
-  .row-foreman { font-size: 14px; font-weight: 500; color: var(--text-secondary); }
   .row-eta { font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 15px; color: var(--accent-blue); }
   .row-status .status-badge { font-size: 11px; padding: 3px 8px; }
-  .row-materials { font-size: 12px; color: var(--text-secondary); font-weight: 500; line-height: 1.4; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
-  .row-materials .mat-chip { font-size: 11px; padding: 1px 6px; }
   .row-notes-cell { font-size: 12px; color: var(--text-muted); font-weight: 500; }
   .row-notes-cell.has-note { color: var(--accent-amber); font-weight: 600; }
 
@@ -438,12 +432,12 @@
 
   // ── MOCK DATA (used when not configured) ──
   const MOCK_SHIPMENTS = [
-    { date:'2026-03-04', project:'PRJ-2024-0147', foreman:'Mike Delgado', bay:7, eta:'10:30 AM', supplier:'UIS Supply', status:'Pending', instructions:'' },
-    { date:'2026-03-04', project:'PRJ-2024-0152', foreman:'Tony Reyes', bay:12, eta:'1:00 PM', supplier:'ABC Materials', status:'Arrived', instructions:'Requires forklift — oversized pallets' },
-    { date:'2026-03-04', project:'PRJ-2024-0160', foreman:'Sarah Kim', bay:3, eta:'3:30 PM', supplier:'UIS Supply', status:'Delayed', instructions:'' },
-    { date:'2026-03-04', project:'PRJ-2024-0163', foreman:'Carlos Vega', bay:15, eta:'8:00 AM', supplier:'UIS Supply', status:'Arrived', instructions:'Call foreman on arrival' },
-    { date:'2026-03-04', project:'PRJ-2024-0171', foreman:'James Park', bay:9, eta:'11:15 AM', supplier:'Regional Supply Co', status:'En Route', instructions:'' },
-    { date:'2026-03-04', project:'PRJ-2024-0175', foreman:'Ana Torres', bay:18, eta:'4:00 PM', supplier:'UIS Supply', status:'Pending', instructions:'Partial shipment — rest tomorrow' },
+    { date:'2026-03-04', project:'PRJ-2024-0147', bay:7, eta:'10:30 AM', supplier:'UIS Supply', status:'Pending', instructions:'' },
+    { date:'2026-03-04', project:'PRJ-2024-0152', bay:12, eta:'1:00 PM', supplier:'ABC Materials', status:'Arrived', instructions:'Requires forklift — oversized pallets' },
+    { date:'2026-03-04', project:'PRJ-2024-0160', bay:3, eta:'3:30 PM', supplier:'UIS Supply', status:'Delayed', instructions:'' },
+    { date:'2026-03-04', project:'PRJ-2024-0163', bay:15, eta:'8:00 AM', supplier:'UIS Supply', status:'Arrived', instructions:'Call foreman on arrival' },
+    { date:'2026-03-04', project:'PRJ-2024-0171', bay:9, eta:'11:15 AM', supplier:'Regional Supply Co', status:'En Route', instructions:'' },
+    { date:'2026-03-04', project:'PRJ-2024-0175', bay:18, eta:'4:00 PM', supplier:'UIS Supply', status:'Pending', instructions:'Partial shipment — rest tomorrow' },
   ];
 
   const MOCK_MATERIALS = [
@@ -523,7 +517,6 @@
       shipments = rawShipments.map(r => ({
         date: r['Date'] || '',
         project: r['Project ID'] || '',
-        foreman: r['Foreman'] || '',
         bay: parseInt(r['Bay #'] || r['Bay'] || '0'),
         eta: r['ETA'] || '',
         supplier: r['Supplier'] || '',
@@ -606,10 +599,6 @@
     renderFooter();
   }
 
-  function getMaterialsForProject(projectId) {
-    return materials.filter(m => m.project === projectId);
-  }
-
   function getStatusClass(status) {
     return 'status-' + (status || 'pending').toLowerCase().replace(/\s+/g, '-');
   }
@@ -617,16 +606,11 @@
   function renderCards(data) {
     let html = '<div class="cards-container">';
     data.forEach(s => {
-      const mats = getMaterialsForProject(s.project);
-      const displayMats = mats.slice(0, 3);
-      const moreCount = Math.max(0, mats.length - 3);
-
       html += `
         <div class="shipment-card">
           <div class="card-top">
             <div>
               <div class="card-project">${s.project}</div>
-              <div class="card-foreman">Foreman: ${s.foreman}</div>
             </div>
             <div class="bay-tag">
               <span class="bay-label">Bay</span>
@@ -644,12 +628,6 @@
             </div>
             <div class="meta-item"><span style="color:var(--text-muted)">${s.supplier}</span></div>
           </div>
-          <div class="card-materials">
-            <div class="material-summary">
-              ${displayMats.map(m => `<span class="mat-chip">${m.name} ×${m.qty}</span>`).join('')}
-              ${moreCount > 0 ? `<span class="mat-more">+${moreCount} more</span>` : ''}
-            </div>
-          </div>
           ${s.instructions ? `<div class="special-instructions">⚠ ${s.instructions}</div>` : ''}
         </div>`;
     });
@@ -661,30 +639,21 @@
     let html = `
       <div class="table-container">
         <div class="table-header">
-          <div>Bay</div><div>Project</div><div>Foreman</div><div>ETA</div>
-          <div>Status</div><div>Key Materials</div><div>Notes</div>
+          <div>Bay</div><div>Project</div><div>ETA</div>
+          <div>Status</div><div>Notes</div>
         </div>
         <div class="table-body">`;
 
     data.forEach(s => {
-      const mats = getMaterialsForProject(s.project);
-      const displayMats = mats.slice(0, 2);
-      const moreCount = Math.max(0, mats.length - 2);
-
       html += `
         <div class="table-row">
           <div class="row-bay">${String(s.bay).padStart(2, '0')}</div>
           <div class="row-project">${s.project}</div>
-          <div class="row-foreman">${s.foreman}</div>
           <div class="row-eta">${s.eta}</div>
           <div class="row-status">
             <div class="status-badge ${getStatusClass(s.status)}">
               <span class="status-dot"></span> ${s.status}
             </div>
-          </div>
-          <div class="row-materials">
-            ${displayMats.map(m => `<span class="mat-chip">${m.name} ×${m.qty}</span>`).join('')}
-            ${moreCount > 0 ? `<span class="mat-more">+${moreCount} more</span>` : ''}
           </div>
           <div class="row-notes-cell ${s.instructions ? 'has-note' : ''}">${s.instructions ? '⚠ ' + s.instructions : '—'}</div>
         </div>`;
