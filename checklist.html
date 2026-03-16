@@ -216,6 +216,7 @@
   .fab-btn:active { transform: scale(0.97); }
   .fab-primary { background: var(--accent-green); color: white; }
   .fab-secondary { background: var(--surface-alt); color: var(--text-secondary); border: 1.5px solid var(--border); }
+  .fab-undo { background: var(--text-primary); color: var(--bg); flex: 0 0 auto; padding: 14px 20px; }
 
   /* ── TOAST ── */
   .toast {
@@ -246,13 +247,12 @@
   //  CONFIGURATION — UPDATE THESE VALUES
   // ═══════════════════════════════════════════════════════════
 
-  // STEP 1: Your Google Sheet ID
+   // STEP 1: Your Google Sheet ID
   const SHEET_ID = '1y9bIOA1wzStM-n_-74w_JuQ_9x1s8d6DJoLxr0eEYPA';
 
   // STEP 2: Your Google Apps Script Web App URL (for write-back)
   // See SETUP-GUIDE.md for instructions
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxVqayDRnXGadnNZRHgfSS3DHwryVNgMHmi2pWKVS0ftegFTGCjyYQxVaUOCWY19l3z/exec';
-
 
   // STEP 3: Tab names
   const SHIPMENTS_TAB = 'Shipments';
@@ -291,9 +291,10 @@
   </div>
 </div>
 
-<div class="fab-bar">
-  <button class="fab-btn fab-secondary" onclick="markAllVisible('Missing')">Mark Missing</button>
-  <button class="fab-btn fab-primary" onclick="markAllVisible('Received')">All Received</button>
+<div class="fab-bar" id="fab-bar">
+  <button class="fab-btn fab-undo" id="undo-btn" onclick="undoLast()" style="display:none;">Undo</button>
+  <button class="fab-btn fab-secondary" id="btn-missing" onclick="markAllVisible('Missing')" style="display:none;">Mark Missing</button>
+  <button class="fab-btn fab-primary" id="btn-received" onclick="markAllVisible('Received')" style="display:none;">All Received</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -593,9 +594,54 @@
     document.getElementById('content').innerHTML = html;
   }
 
+  // ── UNDO STACK ──
+  let undoStack = []; // { idx, previousStatus, newStatus } or { type:'bulk', changes:[...] }
+  const MAX_UNDO = 20;
+
+  function pushUndo(entry) {
+    undoStack.push(entry);
+    if (undoStack.length > MAX_UNDO) undoStack.shift();
+    updateFabBar();
+  }
+
+  function undoLast() {
+    if (undoStack.length === 0) return;
+    const entry = undoStack.pop();
+
+    if (entry.type === 'bulk') {
+      entry.changes.forEach(c => {
+        materialRows[c.idx].status = c.previousStatus;
+        queueWrite(materialRows[c.idx].rowIndex, c.previousStatus);
+      });
+      showToast(`Undid ${entry.changes.length} items`);
+    } else {
+      materialRows[entry.idx].status = entry.previousStatus;
+      queueWrite(materialRows[entry.idx].rowIndex, entry.previousStatus);
+      showToast(`Undid: back to ${entry.previousStatus.toLowerCase()}`);
+    }
+
+    render();
+    updateFabBar();
+  }
+
+  function updateFabBar() {
+    const undoBtn = document.getElementById('undo-btn');
+    const missingBtn = document.getElementById('btn-missing');
+    const receivedBtn = document.getElementById('btn-received');
+
+    // Undo button: show if there's something to undo
+    undoBtn.style.display = undoStack.length > 0 ? 'block' : 'none';
+
+    // Bulk buttons: only show when filtered to a specific project (not "All")
+    const showBulk = activeFilter !== 'all';
+    missingBtn.style.display = showBulk ? 'block' : 'none';
+    receivedBtn.style.display = showBulk ? 'block' : 'none';
+  }
+
   // ── INTERACTIONS ──
   function cycleStatus(idx) {
     const m = materialRows[idx];
+    const prev = m.status;
     if (m.status === 'Pending' || m.status === 'Missing') {
       m.status = 'Received';
       showToast('Marked as received');
@@ -603,12 +649,14 @@
       m.status = 'Pending';
       showToast('Reset to pending');
     }
+    pushUndo({ idx, previousStatus: prev, newStatus: m.status });
     queueWrite(m.rowIndex, m.status);
     render();
   }
 
   function toggleMissing(idx) {
     const m = materialRows[idx];
+    const prev = m.status;
     if (m.status === 'Missing') {
       m.status = 'Pending';
       showToast('Reset to pending');
@@ -616,6 +664,7 @@
       m.status = 'Missing';
       showToast('Flagged as missing');
     }
+    pushUndo({ idx, previousStatus: prev, newStatus: m.status });
     queueWrite(m.rowIndex, m.status);
     render();
   }
@@ -623,19 +672,24 @@
   function setFilter(project) {
     activeFilter = project;
     render();
+    updateFabBar();
   }
 
   function markAllVisible(status) {
     const visible = getVisibleMaterials();
-    let count = 0;
+    const changes = [];
     visible.forEach(m => {
       if (m.status !== status) {
+        const globalIdx = materialRows.indexOf(m);
+        changes.push({ idx: globalIdx, previousStatus: m.status });
         m.status = status;
         queueWrite(m.rowIndex, status);
-        count++;
       }
     });
-    if (count > 0) showToast(`${count} items marked as ${status.toLowerCase()}`);
+    if (changes.length > 0) {
+      pushUndo({ type: 'bulk', changes });
+      showToast(`${changes.length} items marked as ${status.toLowerCase()}`);
+    }
     render();
   }
 
@@ -653,6 +707,7 @@
     document.getElementById('config-banner').style.display = 'block';
   }
   fetchData();
+  updateFabBar();
   setInterval(() => { if (pendingWrites.length === 0) fetchData(); }, REFRESH_INTERVAL * 1000);
 </script>
 
