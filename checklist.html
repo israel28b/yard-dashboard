@@ -293,7 +293,7 @@
   //  CONFIGURATION — UPDATE THESE VALUES
   // ═══════════════════════════════════════════════════════════
 
- 
+
    // STEP 1: Your Google Sheet ID
   const SHEET_ID = '1rE2Gzjdp3otXkjFH3n_kyjmpjM-Y0EZ9P_21k6KRpKse8Ih_IAbwnBQJ';
 
@@ -503,27 +503,16 @@
     pendingWrites = [];
 
     try {
-      const response = await fetch(APPS_SCRIPT_URL, {
+      await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
+        mode: 'no-cors',
         body: JSON.stringify({ updates: batch })
       });
       setSyncBadge('live');
     } catch (err) {
       console.error('Write error:', err);
-      // Try fallback with no-cors for environments that block cross-origin
-      try {
-        await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ updates: batch })
-        });
-        setSyncBadge('live');
-      } catch (err2) {
-        console.error('Fallback write error:', err2);
-        setSyncBadge('error');
-        pendingWrites = [...batch, ...pendingWrites];
-      }
+      setSyncBadge('error');
+      pendingWrites = [...batch, ...pendingWrites];
     }
   }
 
