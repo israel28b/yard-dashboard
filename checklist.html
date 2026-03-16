@@ -293,12 +293,12 @@
   //  CONFIGURATION — UPDATE THESE VALUES
   // ═══════════════════════════════════════════════════════════
 
-   // STEP 1: Your Google Sheet ID
-  const SHEET_ID = '1rE2Gzjdp3otXkjFH3n_kyjmpjM-Y0EZ9P_21k6KRpKse8Ih_IAbwnBQJ';
+  // STEP 1: Your Google Sheet ID
+  const SHEET_ID = 'YOUR_SHEET_ID_HERE';
 
   // STEP 2: Your Google Apps Script Web App URL (for write-back)
   // See SETUP-GUIDE.md for instructions
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby7Namo70vCERk-pJYRnce3rYZoruJx8xz0f9v6YDtpED5QiVlcKfB5Ih3wmhRT9L5y/exec';
+  const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
 
   // STEP 3: Tab names
   const SHIPMENTS_TAB = 'Shipments';
@@ -504,16 +504,25 @@
     try {
       const response = await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ updates: batch })
       });
       setSyncBadge('live');
     } catch (err) {
       console.error('Write error:', err);
-      setSyncBadge('error');
-      // Re-queue failed writes
-      pendingWrites = [...batch, ...pendingWrites];
+      // Try fallback with no-cors for environments that block cross-origin
+      try {
+        await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ updates: batch })
+        });
+        setSyncBadge('live');
+      } catch (err2) {
+        console.error('Fallback write error:', err2);
+        setSyncBadge('error');
+        pendingWrites = [...batch, ...pendingWrites];
+      }
     }
   }
 
