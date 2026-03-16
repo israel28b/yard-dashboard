@@ -200,6 +200,52 @@
   .status-toggle:active { transform: scale(0.95); }
   .status-toggle.missing-btn { color: var(--accent-red); border-color: var(--accent-red); background: var(--accent-red-bg); }
 
+  /* ── NOTES PANEL ── */
+  .material-wrapper { border-bottom: 1px solid var(--border); }
+  .material-wrapper:last-child { border-bottom: none; }
+  .material-wrapper .material-item { border-bottom: none; }
+
+  .notes-panel {
+    padding: 0 14px 12px 62px;
+    display: none;
+  }
+  .notes-panel.open { display: block; }
+
+  .notes-toggle {
+    font-size: 11px; font-weight: 600; color: var(--accent-blue);
+    padding: 4px 0; cursor: pointer; -webkit-user-select: none; user-select: none;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .notes-toggle:active { opacity: 0.6; }
+  .notes-toggle .caret { transition: transform 0.2s; font-size: 10px; }
+  .notes-toggle .caret.open { transform: rotate(90deg); }
+
+  .notes-input-wrap {
+    margin-top: 6px;
+    display: none;
+  }
+  .notes-input-wrap.open { display: block; }
+
+  .notes-input {
+    width: 100%; padding: 10px 12px; border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif;
+    font-size: 14px; color: var(--text-primary); background: var(--surface-alt);
+    resize: none; outline: none; min-height: 40px; max-height: 120px;
+    transition: border-color 0.15s;
+  }
+  .notes-input:focus { border-color: var(--accent-blue); }
+  .notes-input::placeholder { color: var(--text-muted); }
+
+  .notes-saved {
+    margin-top: 6px; padding: 8px 12px; background: var(--surface-alt);
+    border-radius: var(--radius-sm); border: 1px solid var(--border);
+    font-size: 13px; color: var(--text-secondary); line-height: 1.4;
+  }
+
+  .notes-panel.auto-opened .notes-input { border-color: var(--accent-red); }
+
+  .material-item.is-missing + .notes-panel { display: block; }
+
   /* ── BOTTOM BAR ── */
   .fab-bar {
     position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 16px;
@@ -247,12 +293,12 @@
   //  CONFIGURATION — UPDATE THESE VALUES
   // ═══════════════════════════════════════════════════════════
 
-   // STEP 1: Your Google Sheet ID
-  const SHEET_ID = '1y9bIOA1wzStM-n_-74w_JuQ_9x1s8d6DJoLxr0eEYPA';
+  // STEP 1: Your Google Sheet ID
+  const SHEET_ID = 'YOUR_SHEET_ID_HERE';
 
   // STEP 2: Your Google Apps Script Web App URL (for write-back)
   // See SETUP-GUIDE.md for instructions
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxVqayDRnXGadnNZRHgfSS3DHwryVNgMHmi2pWKVS0ftegFTGCjyYQxVaUOCWY19l3z/exec';
+  const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
 
   // STEP 3: Tab names
   const SHIPMENTS_TAB = 'Shipments';
@@ -307,6 +353,7 @@
   let isConfigured = SHEET_ID !== 'YOUR_SHEET_ID_HERE';
   let pendingWrites = [];
   let writeTimer = null;
+  let expandedNotes = new Set();
 
   // ── MOCK DATA ──
   const MOCK_SHIPMENTS = [
@@ -316,27 +363,27 @@
   ];
 
   const MOCK_MATERIALS = [
-    { project:'PRJ-2024-0147', name:"6' Steel Post", qty:126, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:2 },
-    { project:'PRJ-2024-0147', name:'12" MGS Block', qty:126, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:3 },
-    { project:'PRJ-2024-0147', name:"25' W Beam", qty:750, unit:'LF', supplier:'UIS', status:'Pending', rowIndex:4 },
-    { project:'PRJ-2024-0147', name:'12\' 6" W Beam', qty:12.5, unit:'LF', supplier:'UIS', status:'Pending', rowIndex:5 },
-    { project:'PRJ-2024-0147', name:'12\' 6" 3D W Beam', qty:1, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:6 },
-    { project:'PRJ-2024-0147', name:'Single Crystal Reflector', qty:33, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:7 },
-    { project:'PRJ-2024-0147', name:'Concrete (3D Anchorage)', qty:1, unit:'CY', supplier:'', status:'Pending', rowIndex:8 },
-    { project:'PRJ-2024-0147', name:'3D Anchorage', qty:1, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:9 },
-    { project:'PRJ-2024-0147', name:'6"x12"x19" MGS Thrie Block (wood)', qty:9, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:10 },
-    { project:'PRJ-2024-0147', name:'3G Transition (R)/(Approach)/(Leading)', qty:1, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:11 },
-    { project:'PRJ-2024-0147', name:'6"x12"x19" MGS Thrie Block (wood) - 2nd', qty:2, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:12 },
-    { project:'PRJ-2024-0147', name:'3H Transition (L)/(Departure)/(Trailing)', qty:1, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:13 },
-    { project:'PRJ-2024-0147', name:'SKT Non-Flared', qty:1, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:14 },
-    { project:'PRJ-2024-0152', name:'SKT Non-Flared', qty:1, unit:'EA', supplier:'ABC Materials', status:'Received', rowIndex:15 },
-    { project:'PRJ-2024-0152', name:'3G Transition (Right)', qty:1, unit:'EA', supplier:'ABC Materials', status:'Received', rowIndex:16 },
-    { project:'PRJ-2024-0152', name:'3H Transition (Left)', qty:1, unit:'EA', supplier:'ABC Materials', status:'Received', rowIndex:17 },
-    { project:'PRJ-2024-0152', name:'Single Crystal Reflector', qty:20, unit:'EA', supplier:'ABC Materials', status:'Missing', rowIndex:18 },
-    { project:'PRJ-2024-0152', name:'12" MGS Block', qty:50, unit:'EA', supplier:'ABC Materials', status:'Received', rowIndex:19 },
-    { project:'PRJ-2024-0160', name:'Single Crystal Reflector', qty:33, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:20 },
-    { project:'PRJ-2024-0160', name:'3D Anchorage', qty:1, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:21 },
-    { project:'PRJ-2024-0160', name:'6"x12"x19" MGS Thrie Block (wood)', qty:9, unit:'EA', supplier:'UIS', status:'Pending', rowIndex:22 },
+    { project:'PRJ-2024-0147', name:"6' Steel Post", qty:126, unit:'EA', supplier:'UIS', status:'Pending', notes:'', rowIndex:2 },
+    { project:'PRJ-2024-0147', name:'12" MGS Block', qty:126, unit:'EA', supplier:'UIS', status:'Pending', notes:'', rowIndex:3 },
+    { project:'PRJ-2024-0147', name:"25' W Beam", qty:750, unit:'LF', supplier:'UIS', status:'Pending', notes:'', rowIndex:4 },
+    { project:'PRJ-2024-0147', name:'12\' 6" W Beam', qty:12.5, unit:'LF', supplier:'UIS', status:'Pending', notes:'', rowIndex:5 },
+    { project:'PRJ-2024-0147', name:'12\' 6" 3D W Beam', qty:1, unit:'EA', supplier:'UIS', status:'Pending', notes:'', rowIndex:6 },
+    { project:'PRJ-2024-0147', name:'Single Crystal Reflector', qty:33, unit:'EA', supplier:'UIS', status:'Pending', notes:'', rowIndex:7 },
+    { project:'PRJ-2024-0147', name:'Concrete (3D Anchorage)', qty:1, unit:'CY', supplier:'', status:'Pending', notes:'', rowIndex:8 },
+    { project:'PRJ-2024-0147', name:'3D Anchorage', qty:1, unit:'EA', supplier:'UIS', status:'Pending', notes:'', rowIndex:9 },
+    { project:'PRJ-2024-0147', name:'6"x12"x19" MGS Thrie Block (wood)', qty:9, unit:'EA', supplier:'UIS', status:'Pending', notes:'', rowIndex:10 },
+    { project:'PRJ-2024-0147', name:'3G Transition (R)/(Approach)/(Leading)', qty:1, unit:'EA', supplier:'UIS', status:'Pending', notes:'', rowIndex:11 },
+    { project:'PRJ-2024-0147', name:'6"x12"x19" MGS Thrie Block (wood) - 2nd', qty:2, unit:'EA', supplier:'UIS', status:'Pending', notes:'', rowIndex:12 },
+    { project:'PRJ-2024-0147', name:'3H Transition (L)/(Departure)/(Trailing)', qty:1, unit:'EA', supplier:'UIS', status:'Pending', notes:'', rowIndex:13 },
+    { project:'PRJ-2024-0147', name:'SKT Non-Flared', qty:1, unit:'EA', supplier:'UIS', status:'Pending', notes:'', rowIndex:14 },
+    { project:'PRJ-2024-0152', name:'SKT Non-Flared', qty:1, unit:'EA', supplier:'ABC Materials', status:'Received', notes:'', rowIndex:15 },
+    { project:'PRJ-2024-0152', name:'3G Transition (Right)', qty:1, unit:'EA', supplier:'ABC Materials', status:'Received', notes:'', rowIndex:16 },
+    { project:'PRJ-2024-0152', name:'3H Transition (Left)', qty:1, unit:'EA', supplier:'ABC Materials', status:'Received', notes:'', rowIndex:17 },
+    { project:'PRJ-2024-0152', name:'Single Crystal Reflector', qty:20, unit:'EA', supplier:'ABC Materials', status:'Missing', notes:'Short 5 units — supplier confirmed backorder', rowIndex:18 },
+    { project:'PRJ-2024-0152', name:'12" MGS Block', qty:50, unit:'EA', supplier:'ABC Materials', status:'Received', notes:'', rowIndex:19 },
+    { project:'PRJ-2024-0160', name:'Single Crystal Reflector', qty:33, unit:'EA', supplier:'UIS', status:'Pending', notes:'', rowIndex:20 },
+    { project:'PRJ-2024-0160', name:'3D Anchorage', qty:1, unit:'EA', supplier:'UIS', status:'Pending', notes:'', rowIndex:21 },
+    { project:'PRJ-2024-0160', name:'6"x12"x19" MGS Thrie Block (wood)', qty:9, unit:'EA', supplier:'UIS', status:'Pending', notes:'', rowIndex:22 },
   ];
 
   // ── CSV PARSER ──
@@ -415,6 +462,7 @@
         supplier: r['Supplier'] || '',
         status: r['Material Status'] || 'Pending',
         checkedBy: r['Checked By'] || '',
+        notes: r['Notes'] || '',
         rowIndex: r._rowIndex
       }));
 
@@ -431,8 +479,10 @@
   }
 
   // ── WRITE-BACK VIA APPS SCRIPT ──
-  function queueWrite(rowIndex, status) {
-    pendingWrites.push({ row: rowIndex, status: status, timestamp: new Date().toISOString() });
+  function queueWrite(rowIndex, status, notes) {
+    const update = { row: rowIndex, status: status, timestamp: new Date().toISOString() };
+    if (notes !== undefined) update.notes = notes;
+    pendingWrites.push(update);
     setSyncBadge('saving');
 
     // Debounce: batch writes every 1.5 seconds
@@ -571,20 +621,40 @@
       mats.forEach(m => {
         const globalIdx = materialRows.indexOf(m);
         const stateClass = m.status === 'Received' ? 'is-received' : m.status === 'Missing' ? 'is-missing' : '';
+        const isMissing = m.status === 'Missing';
+        const hasNote = m.notes && m.notes.trim().length > 0;
+        const notesOpen = isMissing || hasNote || expandedNotes.has(globalIdx);
 
         html += `
-          <div class="material-item ${stateClass}" onclick="cycleStatus(${globalIdx})">
-            <div class="check-circle">
-              <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              <svg class="x-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <div class="material-wrapper">
+            <div class="material-item ${stateClass}" onclick="cycleStatus(${globalIdx})">
+              <div class="check-circle">
+                <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <svg class="x-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </div>
+              <div class="material-details">
+                <div class="material-name">${m.name}</div>
+                <div class="material-qty">${m.qty} ${m.unit}</div>
+                ${m.supplier ? `<div class="material-supplier">${m.supplier}</div>` : ''}
+              </div>
+              <div class="status-toggle ${m.status === 'Missing' ? 'missing-btn' : ''}" onclick="event.stopPropagation(); toggleMissing(${globalIdx})">
+                ${m.status === 'Missing' ? 'Missing' : 'Flag'}
+              </div>
             </div>
-            <div class="material-details">
-              <div class="material-name">${m.name}</div>
-              <div class="material-qty">${m.qty} ${m.unit}</div>
-              ${m.supplier ? `<div class="material-supplier">${m.supplier}</div>` : ''}
-            </div>
-            <div class="status-toggle ${m.status === 'Missing' ? 'missing-btn' : ''}" onclick="event.stopPropagation(); toggleMissing(${globalIdx})">
-              ${m.status === 'Missing' ? 'Missing' : 'Flag'}
+            <div class="notes-panel ${notesOpen ? 'open' : ''} ${isMissing ? 'auto-opened' : ''}" id="notes-panel-${globalIdx}">
+              <div class="notes-toggle" onclick="event.stopPropagation(); toggleNotes(${globalIdx})">
+                <span class="caret ${notesOpen ? 'open' : ''}">▶</span>
+                ${hasNote ? 'Note' : 'Add note'}
+              </div>
+              <div class="notes-input-wrap ${notesOpen ? 'open' : ''}" id="notes-wrap-${globalIdx}">
+                <textarea class="notes-input"
+                  id="notes-input-${globalIdx}"
+                  placeholder="${isMissing ? 'What is missing or wrong?' : 'Add a note...'}"
+                  onclick="event.stopPropagation()"
+                  onblur="saveNote(${globalIdx})"
+                  oninput="autoGrow(this)"
+                >${m.notes || ''}</textarea>
+              </div>
             </div>
           </div>`;
       });
@@ -691,6 +761,40 @@
       showToast(`${changes.length} items marked as ${status.toLowerCase()}`);
     }
     render();
+  }
+
+  // ── NOTES ──
+  function toggleNotes(idx) {
+    if (expandedNotes.has(idx)) {
+      expandedNotes.delete(idx);
+    } else {
+      expandedNotes.add(idx);
+    }
+    render();
+    // Focus the input if opening
+    if (expandedNotes.has(idx)) {
+      setTimeout(() => {
+        const input = document.getElementById(`notes-input-${idx}`);
+        if (input) input.focus();
+      }, 50);
+    }
+  }
+
+  function saveNote(idx) {
+    const input = document.getElementById(`notes-input-${idx}`);
+    if (!input) return;
+    const newNote = input.value.trim();
+    const m = materialRows[idx];
+    if (newNote !== (m.notes || '').trim()) {
+      m.notes = newNote;
+      queueWrite(m.rowIndex, m.status, newNote);
+      showToast(newNote ? 'Note saved' : 'Note cleared');
+    }
+  }
+
+  function autoGrow(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
   }
 
   // ── TOAST ──
